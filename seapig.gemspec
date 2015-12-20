@@ -5,7 +5,7 @@ require "seapig/version"
 
 # Describe your gem and declare its dependencies:
 Gem::Specification.new do |s|
-  s.name        = "seapig"
+  s.name        = "seapig-rails"
   s.version     = Seapig::VERSION
   s.authors     = ["yunta"]
   s.email       = ["maciej.blomberg@mikoton.com"]
@@ -16,15 +16,12 @@ Gem::Specification.new do |s|
 
   s.files = Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.rdoc", "bin/seapig-*"]
   s.test_files = Dir["test/**/*"]
-  s.executables = ["seapig-worker","seapig-server","seapig-notifier"]
+  s.executables = ["seapig-notifier"]
+  s.require_paths = ["lib"]
 
   s.add_dependency "rails", "~> 4.2.4"
-  s.add_dependency "websocket-eventmachine-server"
   s.add_dependency "websocket-eventmachine-client"
   s.add_dependency "jsondiff"
-  
+  s.add_dependency "hana"
 
-  s.add_development_dependency "pg"
-  s.add_development_dependency "slim"
-  s.add_development_dependency "coffee-rails"
 end

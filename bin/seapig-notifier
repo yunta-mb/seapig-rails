@@ -22,8 +22,10 @@ EM.run {
 		payloads << $payloads.pop while not $payloads.empty?
 		payloads.each { |notifier_name|
 			version = notifiers[notifier_name].seapig_dependency_version #F handle wrong names
+			p version
 			if $last_versions[notifier_name] != version	
-				socket.send(JSON.dump(action: 'update', id: notifier_name, version: version))
+				#socket.send(JSON.dump(action: 'object-update', id: notifier_name, version: version))
+				socket.send(JSON.dump(action: 'object-patch', id: notifier_name, new_version: version, old_version: 0))
 				$last_versions[notifier_name] = version
 			end
 		}
@@ -31,14 +33,15 @@ EM.run {
 
 
 	socket.onopen {
-		socket.send JSON.dump(action: 'worker-register')
+		socket.send(JSON.dump(action: 'client-options-set', options: {name: 'notifier'}))
 		Thread.new {
 			ActiveRecord::Base.connection_pool.with_connection { |connection|
 				connection = connection.instance_variable_get(:@connection)
 				connection.exec("LISTEN seapig_dependency_changed")
 				loop {
-					connection.wait_for_notify { |channel, pid, payload|
-						$payloads << payload
+					connection.wait_for_notify { |channel, pid, payloads|
+						puts "Got notification: channel="+channel+", pid="+pid.inspect+", payload="+payloads.inspect
+						payloads.split(",").each { |payload| $payloads << payload }
 						EM.schedule(on_database_change)
 					}
 				}
@@ -52,6 +55,12 @@ EM.run {
 		EM.stop
 	}
 
+
+	EM.add_periodic_timer(60) {
+#		socket.send(JSON.dump(action: 'object-update', id: 'Minute', version: Time.new.to_i/60))
+		socket.send(JSON.dump(action: 'object-patch', id: 'Minute', new_version: Time.new.to_i/60, old_version: 0))
+	}
+	
 }
 
 	

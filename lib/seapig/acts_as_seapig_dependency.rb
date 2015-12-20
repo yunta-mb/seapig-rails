@@ -16,8 +16,8 @@ module SeapigDependency
 					end
 					
 					def seapig_dependency_changed(*tables)
-						tables << self.name if tables.size == 0
-						connection.instance_variable_get(:@connection).exec("NOTIFY seapig_dependency_changed,"+tables.map { |table| "'%s'"%[table] }.join(','))
+						tables << self.name
+						connection.instance_variable_get(:@connection).exec("NOTIFY seapig_dependency_changed,'"+tables.map { |table| table.kind_of?(Class) and table.name or table }.uniq.join(',')+"'")
 					end
 					
 				end
