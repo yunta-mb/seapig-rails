@@ -9,14 +9,14 @@ Gem::Specification.new do |s|
   s.version     = Seapig::VERSION
   s.authors     = ["yunta"]
   s.email       = ["maciej.blomberg@mikoton.com"]
-  s.homepage    = "http://meh.no"
-  s.summary     = "Transient object synchronization lib"
+  s.homepage    = "https://github.com/yunta-mb/seapig-rails"
+  s.summary     = "Transient object synchronization lib - rails"
   s.description = "meh"
   s.license     = "MIT"
 
   s.files = Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.rdoc", "bin/seapig-*"]
   s.test_files = Dir["test/**/*"]
-  s.executables = ["seapig-notifier"]
+  s.executables = ["seapig-notifier","seapig-session-saver"]
   s.require_paths = ["lib"]
 
   s.add_dependency "rails", "~> 4.2.4"
