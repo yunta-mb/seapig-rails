@@ -91,8 +91,9 @@ class SeapigObject
         changed: () ->
                 old_version = @version
                 @version += 1
-                @upload(old_version, @shadow)
+                old_object = @shadow
                 @shadow = JSON.parse(JSON.stringify(@object))
+                @upload(old_version, old_object)
 
 
         upload: (old_version, old_object)->
@@ -101,7 +102,7 @@ class SeapigObject
                         action: 'object-patch'
                         old_version: old_version
                         new_version: @version
-                        patch: jsonpatch.compare(old_object, @object)
+                        patch: jsonpatch.compare(old_object, @shadow)
                         }
                 @server.socket.send(JSON.stringify(message)) if @server.connected
 
