@@ -1,13 +1,16 @@
 #!/bin/env ruby
 
+ENV['RAILS_ENV'] = 'production'
 require './config/environment.rb'
 
 require 'websocket-eventmachine-client'
 require 'json'
 
-
-Rails.application.eager_load!
 notifiers = Hash[*ActiveRecord::Base.descendants.select { |cls| cls.respond_to?('seapig_dependency_version') }.map { |notifier| [notifier.name,notifier] }.flatten ]
+
+puts "Known notifiers:"
+notifiers.keys.each { |notifier| puts "        "+notifier }
+puts
 
 $last_versions = {}
 $payloads = Queue.new

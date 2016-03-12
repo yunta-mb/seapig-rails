@@ -12,8 +12,9 @@ class SeapigRouterSessionStateProducer < Producer
 		version = Time.new.to_f
 		p session_key, object_id
 		session = SeapigRouterSession.find_by(key: session_key)
-		data = SeapigRouterSessionState.find_by(seapig_router_session_id: session.id, state_id: state_id).state
-		p data
+		state = SeapigRouterSessionState.find_by(seapig_router_session_id: session.id, state_id: state_id)
+		return [false, {SeapigRouterSessionState: SeapigRouterSessionState.seapig_dependency_version}] if not state
+		data = state.state
 		[data, version]
 	end
 

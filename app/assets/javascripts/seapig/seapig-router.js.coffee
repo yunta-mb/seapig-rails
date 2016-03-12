@@ -1,12 +1,13 @@
 class @SeapigRouter
 
 
-        constructor: (seapig_server, session_id, initial_state, debug = false)->
+        constructor: (seapig_server, session_id, initial_search, debug = false)->
                 @seapig_server = seapig_server
                 @session_id = session_id
                 @debug = debug
+                @initial_search = initial_search
 
-                @state = _.extend({session_id: @session_id, id: 0}, initial_state)
+                @state = {session_id: @session_id, id: 0}
 
                 @session_data = @seapig_server.master('web-session-data-'+@session_id)
                 @session_data.object.states = [ @state ]
@@ -51,27 +52,32 @@ class @SeapigRouter
                         path_session_id = spl.shift()
                         path_state_id = spl.shift()
                 else
-                        path_session_id = @session_id
-                        path_state_id = 0
-                        spl = []
+                        window.history.replaceState(@state,null,'/a/'+@session_id+'/0'+@initial_search)
+                        return @location_changed()
 
-                diff = []
+                total_diff = []
+                partial_diff = []
                 while spl.length > 0
-                        diff.push([spl.shift(),spl.shift()])
+                       total_diff.push([spl.shift(),spl.shift()])
                 if window.location.search.length > 0
                         for pair in window.location.search.split('?')[1].split('&')
-                                diff.push(pair.split('=',2))
-                console.log('Parsed location: session_id:',path_session_id,' diff:', diff) if @debug
+                                total_diff.push(pair.split('=',2))
+                                partial_diff.push(pair.split('=',2))
+                console.log('Parsed location: session_id:',path_session_id,' partial_diff:', partial_diff) if @debug
 
                 if path_session_id == @session_id
-                        @state_change(diff)
+                        @state_change(partial_diff)
                 else
                         if @remote_state?
-                                @state_change_to_remote(diff)
+                                @state_change_to_remote(total_diff)
                         else
                                 @state_valid = false
-                                @remote_state = @seapig_server.slave('web-session-state-'+path_session_id+':'+path_state_id)
-                                @remote_state.onchange = ()=> @state_change_to_remote(diff)
+                                if path_state_id == '0'
+                                        @remote_state = {object: {session_id: path_session_id, id: 0}}
+                                        @state_change_to_remote(total_diff)
+                                else
+                                        @remote_state = @seapig_server.slave('web-session-state-'+path_session_id+':'+path_state_id)
+                                        @remote_state.onchange = ()=> @state_change_to_remote(total_diff)
 
 
         state_change_to_remote: (diff) ->
@@ -95,7 +101,7 @@ class @SeapigRouter
                 @session_data.object.states.push(@state)
                 @session_data.changed()
                 if @remote_state?
-                        @remote_state.unlink()
+                        @remote_state.unlink() if @remote_state.object.id > 0
                         @remote_state = null
                 @state_valid = true
                 @state_changed()
@@ -103,10 +109,28 @@ class @SeapigRouter
 
         state_diff_apply: (state, diff)->
                 for entry in diff
-                        if entry[0][0] == '-'
-                                delete state[entry[0][1..-1]]
+                        address = entry[0]
+                        value = entry[1]
+                        add = (address[0] != '-')
+                        hash = (address[address.length-1] != '~')
+                        address = address[1..-1] if address[0] == '-'
+                        address = address[0..-2] if address[address.length-1] == '~'
+                        obj = state
+                        spl = address.split('~')
+                        for subobj,i in spl
+                                if i < (spl.length-1)
+                                        obj[subobj] = {} if not obj[subobj]?
+                                        obj = obj[subobj]
+                        if add
+                                if hash
+                                        obj[spl[spl.length-1]] = value
+                                else
+                                        obj[spl[spl.length-1]].push(value)
                         else
-                                state[entry[0]] = entry[1]
+                                if hash
+                                        delete obj[spl[spl.length-1]]
+                                else
+                                        state[entry[0]].splice(_.indexOf(state[entry[0]], value),1)
                 state
 
 

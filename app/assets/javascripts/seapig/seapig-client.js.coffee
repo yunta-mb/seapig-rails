@@ -12,20 +12,20 @@ class @SeapigServer
         connect: () ->
                 @connected = false
 
-                @socket = new WebSocket(@url,'SeaPig-0.0')
+                @socket = new WebSocket(@url)
 
                 @socket.onerror = (error) =>
                         console.log('Seapig socket error', error)
                         @socket.close()
 
                 @socket.onclose = () =>
-                        console.log('Seapig connection closed')
+                        console.log('Seapig connection closed') if @options.debug
                         for object_id, object of @slave_objects
                                 object.valid = false
                         setTimeout((=>@connect()), 2000)
 
                 @socket.onopen = () =>
-                        console.log('Seapig connection opened')
+                        console.log('Seapig connection opened') if @options.debug
                         @connected = true
                         @socket.send(JSON.stringify(action: 'client-options-set', options: @options))
                         for object_id, object of @slave_objects
