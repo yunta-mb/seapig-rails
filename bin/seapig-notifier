@@ -64,6 +64,9 @@ EM.run {
 		socket.send(JSON.dump(action: 'object-patch', id: 'Minute', new_version: Time.new.to_i/60, old_version: 0))
 	}
 	
+	EM.add_periodic_timer(1) {
+		socket.send(JSON.dump(action: 'object-patch', id: 'Second', new_version: Time.new.to_i, old_version: 0))
+	}
 }
 
 	

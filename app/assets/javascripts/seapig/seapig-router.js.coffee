@@ -51,8 +51,11 @@ class @SeapigRouter
                 if spl.shift() == 'a'
                         path_session_id = spl.shift()
                         path_state_id = spl.shift()
+                        if not path_state_id
+                                window.history.replaceState(@state,null,'/a/'+@session_id+'/0'+window.location.search)
+                                return @location_changed()
                 else
-                        window.history.replaceState(@state,null,'/a/'+@session_id+'/0'+@initial_search)
+                        window.history.replaceState(@state,null,'/a/'+@session_id+'/0?'+(@initial_search.replace(/^\?/,'')+window.location.search.replace(/^\?/,'&')).replace(/^&/,''))
                         return @location_changed()
 
                 total_diff = []
