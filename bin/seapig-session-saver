@@ -8,18 +8,20 @@ require 'seapig-client'
 
 EM.run {
 	
-	SeapigServer.new(ARGV[0],name: 'session-saver').slave('web-session-data-*').onchange { |sessions|
-		sessions.each_pair { |session_key, session_data|
-			p session_key
-			session = SeapigRouterSession.find_by(key: session_key.split('-',4)[3])
-			max_state = session.seapig_router_session_states.order("state_id DESC").first
-			max_state_id = (max_state and max_state.state_id or -1)
-			session_data['states'].each { |state|
-				if state['id'] > max_state_id		
-					puts Time.new.to_s + " " + state.inspect
-					SeapigRouterSessionState.create!(seapig_router_session_id: session.id, state_id: state['id'], state: state)
-				end
-			}
+	SeapigServer.new(ARGV[0],name: 'session-saver').slave('web-session-data-*').onchange { |session_data|
+		next if session_data.destroyed
+		session_key = session_data.object_id
+		p session_key
+		session = SeapigRouterSession.find_by(key: session_key.split('-',4)[3])
+		p session
+		max_state = session.seapig_router_session_states.order("state_id DESC").first
+		max_state_id = (max_state and max_state.state_id or -1)
+		p max_state, session_data['states'].map { |s| s['id'] }
+		session_data['states'].each { |state|
+			if state['id'] > max_state_id		
+				puts Time.new.to_s + " " + state.inspect
+				SeapigRouterSessionState.create!(seapig_router_session_id: session.id, state_id: state['id'], state: state)
+			end
 		}
 		SeapigRouterSession.seapig_dependency_changed("SeapigRouterSessionState")
 	}
