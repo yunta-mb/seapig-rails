@@ -22,6 +22,7 @@ class @SeapigServer
                         console.log('Seapig connection closed') if @options.debug
                         for object_id, object of @slave_objects
                                 object.valid = false
+                                object.onchange() if object.onchange?
                         setTimeout((=>@connect()), 2000)
 
                 @socket.onopen = () =>

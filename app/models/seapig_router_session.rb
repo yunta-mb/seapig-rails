@@ -2,9 +2,6 @@ class SeapigRouterSession < ActiveRecord::Base
 
 	has_many :seapig_router_session_states
 
-	acts_as_seapig_dependency
-
-
 	def self.generate
 		session = SeapigRouterSession.new
 		begin

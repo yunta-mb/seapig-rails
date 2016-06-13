@@ -1,36 +1,25 @@
 #!/bin/env ruby
 
-ENV['RAILS_ENV'] = 'production'
 require './config/environment.rb'
 
 require 'websocket-eventmachine-client'
 require 'json'
 
-notifiers = Hash[*ActiveRecord::Base.descendants.select { |cls| cls.respond_to?('seapig_dependency_version') }.map { |notifier| [notifier.name,notifier] }.flatten ]
 
-puts "Known notifiers:"
-notifiers.keys.each { |notifier| puts "        "+notifier }
-puts
-
-$last_versions = {}
-$payloads = Queue.new
+#ActiveRecord::Base.logger = Logger.new(STDERR)
 
 EM.run {
 
 	socket = WebSocket::EventMachine::Client.connect(uri: ARGV[0])
-
+	connected = false
 	
 	on_database_change = Proc.new {
-		payloads = Set.new
-		payloads << $payloads.pop while not $payloads.empty?
-		payloads.each { |notifier_name|
-			version = notifiers[notifier_name].seapig_dependency_version #F handle wrong names
-			p version
-			if $last_versions[notifier_name] != version	
-				#socket.send(JSON.dump(action: 'object-update', id: notifier_name, version: version))
-				socket.send(JSON.dump(action: 'object-patch', id: notifier_name, new_version: version, old_version: 0))
-				$last_versions[notifier_name] = version
-			end
+		next if not connected
+		SeapigDependency.where("current_version != reported_version").each { |seapig_dependency|
+			puts "Dependency version changed: %30s:%-10s"%[seapig_dependency.name,seapig_dependency.current_version]
+			socket.send(JSON.dump(action: 'object-patch', id: seapig_dependency.name, new_version: seapig_dependency.current_version, old_version: 0))
+			seapig_dependency.reported_version = seapig_dependency.current_version
+			seapig_dependency.save!
 		}
 	}
 
@@ -43,29 +32,26 @@ EM.run {
 				connection.exec("LISTEN seapig_dependency_changed")
 				loop {
 					connection.wait_for_notify { |channel, pid, payloads|
-						puts "Got notification: channel="+channel+", pid="+pid.inspect+", payload="+payloads.inspect
-						payloads.split(",").each { |payload| $payloads << payload }
+						#puts "Got notification: channel="+channel+", pid="+pid.inspect+", payload="+payloads.inspect
 						EM.schedule(on_database_change)
 					}
 				}
 			}
 		}
+		connected = true
 		EM.schedule on_database_change
 	}
 
-	
+
 	socket.onclose { |code, reason|
 		EM.stop
 	}
 
 
-	EM.add_periodic_timer(60) {
-#		socket.send(JSON.dump(action: 'object-update', id: 'Minute', version: Time.new.to_i/60))
-		socket.send(JSON.dump(action: 'object-patch', id: 'Minute', new_version: Time.new.to_i/60, old_version: 0))
-	}
-	
-	EM.add_periodic_timer(1) {
-		socket.send(JSON.dump(action: 'object-patch', id: 'Second', new_version: Time.new.to_i, old_version: 0))
+	(ARGV[1] or "").split(',').each { |interval|
+		EM.add_periodic_timer(interval.to_i) {
+			socket.send(JSON.dump(action: 'object-patch', id: 'Seconds#'+interval, new_version: Time.new.to_i/interval.to_i, old_version: 0))
+		}
 	}
 }
 
