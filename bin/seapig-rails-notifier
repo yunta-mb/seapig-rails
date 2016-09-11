@@ -2,57 +2,58 @@
 
 require './config/environment.rb'
 
-require 'websocket-eventmachine-client'
-require 'json'
+require 'seapig-client'
 
 
+STDOUT.sync = true
 #ActiveRecord::Base.logger = Logger.new(STDERR)
+
 
 EM.run {
 
-	socket = WebSocket::EventMachine::Client.connect(uri: ARGV[0])
-	connected = false
-	
+	server = SeapigServer.new(ARGV[0], name: 'notifier')
+	seapigs = Hash.new { |h,k| h[k] = server.notifier(k) }
+
 	on_database_change = Proc.new {
-		next if not connected
+		next if not server.connected
 		SeapigDependency.where("current_version != reported_version").each { |seapig_dependency|
 			puts "Dependency version changed: %30s:%-10s"%[seapig_dependency.name,seapig_dependency.current_version]
-			socket.send(JSON.dump(action: 'object-patch', id: seapig_dependency.name, new_version: seapig_dependency.current_version, old_version: 0))
+			seapigs[seapig_dependency.name].changed(seapig_dependency.current_version)
 			seapig_dependency.reported_version = seapig_dependency.current_version
 			seapig_dependency.save!
 		}
 	}
 
-
-	socket.onopen {
-		socket.send(JSON.dump(action: 'client-options-set', options: {name: 'notifier'}))
-		Thread.new {
+	Thread.new {
+		begin
 			ActiveRecord::Base.connection_pool.with_connection { |connection|
 				connection = connection.instance_variable_get(:@connection)
 				connection.exec("LISTEN seapig_dependency_changed")
 				loop {
 					connection.wait_for_notify { |channel, pid, payloads|
-						#puts "Got notification: channel="+channel+", pid="+pid.inspect+", payload="+payloads.inspect
 						EM.schedule(on_database_change)
 					}
 				}
 			}
-		}
-		connected = true
-		EM.schedule on_database_change
-	}
-
-
-	socket.onclose { |code, reason|
-		EM.stop
+		rescue Exception => e
+			puts "Exception in database thread"
+			p e
+			EM.schedule {
+				server.disconnect
+				EM.stop
+			}
+		end
 	}
 
 
 	(ARGV[1] or "").split(',').each { |interval|
 		EM.add_periodic_timer(interval.to_i) {
-			socket.send(JSON.dump(action: 'object-patch', id: 'Seconds#'+interval, new_version: Time.new.to_i/interval.to_i, old_version: 0))
+			seapigs['Seconds#'+interval].changed(Time.new.to_i/interval.to_i)
 		}
 	}
+	
+	EM.schedule on_database_change
+
 }
 
-	
+

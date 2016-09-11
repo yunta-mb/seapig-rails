@@ -80,11 +80,15 @@ class SeapigObject
 
 
         patch: (data) ->
-                if data.old_version == 0
+                if data.old_version == 0 or data.value?
                         delete @object[key] for key, value of @object
                 else if not _.isEqual(@version, data.old_version)
                         console.log("Seapig lost some updates, this shouldn't ever happen. object:",@id," version:", @version, " old_version:", data.old_version)
-                jsonpatch.apply(@object, data.patch)
+                if data.value?
+                        for key,value of data.value
+                                @object[key] = value
+                else
+                        jsonpatch.apply(@object, data.patch)
                 @version = data.new_version
                 @valid = true
                 @onchange() if @onchange?

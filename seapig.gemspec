@@ -16,12 +16,10 @@ Gem::Specification.new do |s|
 
   s.files = Dir["{app,config,db,lib}/**/*", "MIT-LICENSE", "Rakefile", "README.rdoc", "bin/seapig-*"]
   s.test_files = Dir["test/**/*"]
-  s.executables = ["seapig-notifier","seapig-session-saver"]
+  s.executables = ["seapig-rails-notifier","seapig-rails-session-saver"]
   s.require_paths = ["lib"]
 
   s.add_dependency "rails", "~> 4.2.4"
-  s.add_dependency "websocket-eventmachine-client"
-  s.add_dependency "jsondiff"
-  s.add_dependency "hana"
+  s.add_dependency "seapig-client", "~> 0.1.0"
 
 end
