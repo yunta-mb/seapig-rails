@@ -49,7 +49,7 @@ class @SeapigRouter
         url_to_diff: (pathname, search)->
                 spl = pathname.split(@mountpoint)
                 spl.shift()
-                spl = spl.join(@mountpoint).split('/')
+                spl = (decodeURIComponent(part) for part in spl.join(@mountpoint).split('/'))
                 if spl.shift() == 'a'
                         path_session_id = spl.shift()
                         path_state_id = spl.shift()
@@ -64,8 +64,9 @@ class @SeapigRouter
                        total_diff.push([spl.shift(),spl.shift()])
                 if search.length > 1
                         for pair in search.split('?')[1].split('&')
-                                total_diff.push(pair.split('=',2))
-                                partial_diff.push(pair.split('=',2))
+                                decoded_pair = (decodeURIComponent(part) for part in pair.split('=',2))
+                                total_diff.push(decoded_pair)
+                                partial_diff.push(decoded_pair)
 
                 console.log('Parsed location: session_id:',path_session_id,' partial_diff:', partial_diff) if @debug
 
