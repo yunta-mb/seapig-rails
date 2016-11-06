@@ -20,6 +20,6 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
 
   s.add_dependency "rails", "~> 4.2.4"
-  s.add_dependency "seapig-client", "~> 0.1.2"
+  s.add_dependency "seapig-client", "~> 0.1.4"
 
 end

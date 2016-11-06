@@ -18,7 +18,7 @@ EM.run {
 		next if not server.connected
 		SeapigDependency.where("current_version != reported_version").each { |seapig_dependency|
 			puts "Dependency version changed: %30s:%-10s"%[seapig_dependency.name,seapig_dependency.current_version]
-			seapigs[seapig_dependency.name].changed(seapig_dependency.current_version)
+			seapigs[seapig_dependency.name].send(seapig_dependency.current_version)
 			seapig_dependency.reported_version = seapig_dependency.current_version
 			seapig_dependency.save!
 		}
@@ -48,12 +48,11 @@ EM.run {
 
 	(ARGV[1] or "").split(',').each { |interval|
 		EM.add_periodic_timer(interval.to_i) {
-			seapigs['Seconds#'+interval].changed(Time.new.to_i/interval.to_i)
+			seapigs['Seconds#'+interval].send(Time.new.to_i/interval.to_i)
 		}
 	}
-	
+
 	EM.schedule on_database_change
 
 }
-
 
